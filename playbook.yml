@@ -1,0 +1,103 @@
+---
+- name: "Instalacion y configuracion de serivdor Web"
+  hosts: nodo1
+  tasks:
+    - name: "Mensaje por pantalla"
+      debug:
+        msg: "En este ejericicio practicaremos el desarrollo de un playbook desde 0 para ello, realizaremos varias tareas para levantar un servidor apache"
+    - name: "Instalar paquete httpd"
+      yum:
+        name: httpd
+        state: installed
+    - name: "Habilitar en el firewalld el servicio http"
+      firewalld:
+        service: http
+        permanent: yes
+        state: enabled
+    - name: "Habilitar en el firewalld el servicio https"
+      firewalld:
+        service: https
+        permanent: yes
+        state: enabled
+    - name: "Recargar firewalld"
+      systemd:
+        name: firewalld
+        state: reloaded
+    - name: "Habilitar httpd al inicio"
+      ansible.builtin.service:
+        name: httpd
+        enabled: yes
+    - name: "Disable SELinux"
+      selinux:
+        state: disabled
+    - name: "Crea directorio /var/www/example.com/html"
+      ansible.builtin.file:
+        path: /var/www/example.com/html
+        state: directory
+        owner: root
+        group: root
+    - name: "Crea directorio /var/www/example.com/log"
+      ansible.builtin.file:
+        path: /var/www/example.com/log
+        state: directory
+        owner: root
+        group: root
+    - name: "Cambiar permisos directorio /var/www "
+      ansible.builtin.file:
+        path: /var/www/
+        state: directory
+        recurse: yes
+        mode: '0755'
+    - name: "Creamos el fichero /var/www/example.com/html/index.html"
+      ansible.builtin.file:
+        path: /var/www/example.com/html/index.html
+        state: touch
+    - name: "Añadir bloque al fichero"
+      blockinfile:
+        path: /var/www/example.com/html/index.html
+        block:  |
+            <html>
+              <head>
+                <title>Welcome to Example.com!</title>
+              </head>
+              <body>
+                <h1>Success! The example.com virtual host is working!</h1>
+              </body>
+            </html>
+
+    - name: "Crea directorio /etc/httpd/sites-available"
+      ansible.builtin.file:
+        path: /etc/httpd/sites-available
+        state: directory
+    - name: "Crea directorio /etc/httpd/sites-enabled"
+      ansible.builtin.file:
+        path: /etc/httpd/sites-enabled
+        state: directory
+    - name: "Añadir al final del fichero"
+      lineinfile:
+        path: "/etc/httpd/conf/httpd.conf"
+        line: "IncludeOptional sites-enabled/*.conf"   
+    - name: "Creamos el fichero /etc/httpd/sites-available/example.com.conf"
+      ansible.builtin.file:
+        path: /etc/httpd/sites-available/example.com.conf
+        state: touch
+        owner:  root
+        mode: '0755'
+    - name: "Añadir bloque al fichero 2"
+      blockinfile:
+        path: /etc/httpd/sites-available/example.com.conf
+        block:  |
+          <VirtualHost *:80>
+            ServerName www.example.com
+            ServerAlias example.com
+            DocumentRoot /var/www/example.com/html
+            ErrorLog /var/www/example.com/log/error.log
+            CustomLog /var/www/example.com/log/requests.log combined
+          </VirtualHost>
+    - name: "Crear enlace simbólico"
+      file:
+        src: "/etc/httpd/sites-available/example.com.conf"
+        dest: "/etc/httpd/sites-enabled/example.com.conf"
+        state: link
+    - name: "Reincia el servidor"
+      reboot:
