@@ -23,13 +23,17 @@
       systemd:
         name: firewalld
         state: reloaded
+
     - name: "Habilitar httpd al inicio"
       ansible.builtin.service:
         name: httpd
         enabled: yes
+        state: restarted
+
     - name: "Disable SELinux"
       selinux:
         state: disabled
+    # TE obliga el reinicio. Por ese motivo suele usar el command, ejecutar el selinux disabled y no es necesario el reincio
     - name: "Crea directorio /var/www/example.com/html"
       ansible.builtin.file:
         path: /var/www/example.com/html
